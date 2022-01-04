@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net5.0</TargetFramework>
+        <TargetFramework>net6.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
@@ -9,21 +9,21 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="5.0.*" />
-        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.*" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.1.4" />
+        <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="6.0.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.0" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.1" />
+        <PackageReference Include="Volo.Abp.MongoDB" Version="5.0.0-rc.1" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Volo.Abp.AspNetCore.MultiTenancy" Version="4.4.0-rc.1" />
-        <PackageReference Include="Volo.Abp.EventBus.RabbitMQ" Version="4.4.0-rc.1" />
-        <PackageReference Include="Volo.Abp.BackgroundJobs.RabbitMQ" Version="4.4.0-rc.1" />
-        <PackageReference Include="Volo.Abp.Caching.StackExchangeRedis" Version="4.4.0-rc.1" />
+        <PackageReference Include="Volo.Abp.AspNetCore.MultiTenancy" Version="5.0.0-rc.1" />
+        <PackageReference Include="Volo.Abp.EventBus.RabbitMQ" Version="5.0.0-rc.1" />
+        <PackageReference Include="Volo.Abp.BackgroundJobs.RabbitMQ" Version="5.0.0-rc.1" />
+        <PackageReference Include="Volo.Abp.Caching.StackExchangeRedis" Version="5.0.0-rc.1" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\services\administration\src\EShopOnAbp.AdministrationService.EntityFrameworkCore\EShopOnAbp.AdministrationService.EntityFrameworkCore.csproj" />
-        <ProjectReference Include="..\..\services\saas\src\EShopOnAbp.SaasService.EntityFrameworkCore\EShopOnAbp.SaasService.EntityFrameworkCore.csproj" />
+        <ProjectReference Include="..\..\services\administration\src\EShopOnAbp.AdministrationService.EntityFrameworkCore\EShopOnAbp.AdministrationService.EntityFrameworkCore.csproj" />        
     </ItemGroup>
 
 </Project>

@@ -2,6 +2,14 @@
   "culture": "tr",
   "texts": {
     "Menu:Home": "Ana Sayfa",
-    "Login": "Giriş"
+    "Login": "Giriş",
+    "YourBasket": "Sepetiniz",
+    "Total": "Toplam",
+    "OurProducts": "Ürünlerimiz",
+    "CatalogServiceNotAvailable": "Ürün servisine şu anda ulaşılamıyor! Lütfen sonra tekrar deneyiniz...",
+    "StockCount": "Stokta",
+    "RemoveFromBasket": "Sepetten kaldır",
+    "CompletePurchase": "Alışverişi tamamla",
+    "CompleteOrder": "Siparişi onayla"
   }
 }

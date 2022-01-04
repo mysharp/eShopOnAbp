@@ -9,9 +9,10 @@ if (! (  Test-Path ".\etc\dev-cert\localhost.pfx" -PathType Leaf ) ){
 }
 
 <# Check Docker containers #>
+docker network create eshoponabp-network
 
 $requiredServices = @(
-	'sql-server-db',
+	'postgres-db',
 	'rabbitmq',
 	'redis'
 )

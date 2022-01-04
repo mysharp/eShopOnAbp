@@ -44,16 +44,6 @@ namespace EShopOnAbp.PublicWeb.Menus
                     order: 0
                 )
             );
-            // Products
-            // context.Menu.AddItem(
-            //     new ApplicationMenuItem(
-            //         EShopOnAbpPublicWebMenus.ProductPage,
-            //         "Products",
-            //         "/Products",
-            //         icon: "fa fa-product-hunt",
-            //         order: 1
-            //     )
-            // );
 
             return Task.CompletedTask;
         }

@@ -1,13 +1,16 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using EShopOnAbp.AdministrationService.DbMigrations;
 using EShopOnAbp.AdministrationService.EntityFrameworkCore;
-using EShopOnAbp.SaasService;
+using EShopOnAbp.Shared.Hosting.AspNetCore;
 using EShopOnAbp.Shared.Hosting.Microservices;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Volo.Abp;
 using Volo.Abp.Account;
-using Volo.Abp.AspNetCore.Mvc;
 using Volo.Abp.AspNetCore.Mvc.UI.MultiTenancy;
 using Volo.Abp.Http.Client.IdentityModel.Web;
 using Volo.Abp.Identity;
@@ -24,15 +27,45 @@ namespace EShopOnAbp.AdministrationService
         typeof(AbpAccountApplicationContractsModule),
         typeof(AbpHttpClientIdentityModelWebModule),
         typeof(AbpAspNetCoreMvcUiMultiTenancyModule),
-        typeof(SaasServiceApplicationContractsModule),
         typeof(AbpIdentityHttpApiClientModule)
     )]
     public class AdministrationServiceHttpApiHostModule : AbpModule
     {
         public override void ConfigureServices(ServiceConfigurationContext context)
         {
+            var configuration = context.Services.GetConfiguration();
+            
             JwtBearerConfigurationHelper.Configure(context, "AdministrationService");
-            SwaggerConfigurationHelper.Configure(context, "Administration Service API");
+            // SwaggerConfigurationHelper.Configure(context, "Administration Service API");
+            
+            SwaggerWithAuthConfigurationHelper.Configure(
+                context: context,
+                authority: configuration["AuthServer:Authority"],
+                scopes: new Dictionary<string, string> /* Requested scopes for authorization code request and descriptions for swagger UI only */
+                {
+                    {"Administration", "Administration Service API"},
+                },
+                apiTitle: "Administration Service API"
+            );
+            
+            context.Services.AddCors(options =>
+            {
+                options.AddDefaultPolicy(builder =>
+                {
+                    builder
+                        .WithOrigins(
+                            configuration["App:CorsOrigins"]
+                                .Split(",", StringSplitOptions.RemoveEmptyEntries)
+                                .Select(o => o.Trim().RemovePostFix("/"))
+                                .ToArray()
+                        )
+                        .WithAbpExposedHeaders()
+                        .SetIsOriginAllowedToAllowWildcardSubdomains()
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials();
+                });
+            });
         }
         public override void OnApplicationInitialization(ApplicationInitializationContext context)
         {
@@ -45,13 +78,13 @@ namespace EShopOnAbp.AdministrationService
             }
 
             app.UseCorrelationId();
+            app.UseCors();
             app.UseAbpRequestLocalization();
             app.UseStaticFiles();
             app.UseRouting();
             //app.UseHttpMetrics();
             app.UseAuthentication();
             app.UseAbpClaimsMap();
-            app.UseMultiTenancy();
             app.UseAuthorization();
             app.UseSwagger();
             app.UseSwaggerUI(options =>

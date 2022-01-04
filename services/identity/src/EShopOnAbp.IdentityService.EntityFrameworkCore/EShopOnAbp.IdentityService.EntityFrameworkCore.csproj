@@ -1,13 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net5.0</TargetFramework>
+        <TargetFramework>net6.0</TargetFramework>
         <RootNamespace>EShopOnAbp.IdentityService</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="5.0.*">
-            <PrivateAssets>all</PrivateAssets>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="6.0.0">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
     </ItemGroup>
@@ -17,9 +16,9 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Volo.Abp.EntityFrameworkCore.SqlServer" Version="4.4.0-rc.1" />
-        <PackageReference Include="Volo.Abp.Identity.EntityFrameworkCore" Version="4.4.0-rc.1" />
-        <PackageReference Include="Volo.Abp.IdentityServer.EntityFrameworkCore" Version="4.4.0-rc.1" />
+        <PackageReference Include="Volo.Abp.EntityFrameworkCore.PostgreSql" Version="5.0.0-rc.1" />
+        <PackageReference Include="Volo.Abp.Identity.EntityFrameworkCore" Version="5.0.0-rc.1" />
+        <PackageReference Include="Volo.Abp.IdentityServer.EntityFrameworkCore" Version="5.0.0-rc.1" />
     </ItemGroup>
 
 </Project>

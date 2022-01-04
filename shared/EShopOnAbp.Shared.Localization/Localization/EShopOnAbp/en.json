@@ -2,6 +2,14 @@
   "culture": "en",
   "texts": {
     "Menu:Home": "Home",
-    "Login": "Login"
+    "Login": "Login",
+    "YourBasket": "Your Basket",
+    "Total": "Total",
+    "OurProducts": "Our Products",
+    "CatalogServiceNotAvailable": "Catalog Service is unavailable right now! Try again later...",
+    "StockCount": "Stock Count",
+    "RemoveFromBasket": "Remove from basket",
+    "CompletePurchase": "Complete purchase",
+    "CompleteOrder": "Complete order"
   }
 }

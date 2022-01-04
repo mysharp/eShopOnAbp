@@ -1,0 +1,55 @@
+@using EShopOnAbp.Localization
+@using EShopOnAbp.PublicWeb.Components.Purchase
+@using Microsoft.Extensions.Localization
+@model EShopOnAbp.BasketService.BasketDto
+@inject IStringLocalizer<EShopOnAbpResource> L
+
+<div>
+    @if (!Model.Items.Any())
+    {
+        <div class="basket-list">
+            <p class="text-center">
+                <strong>
+                    <em>Your basket is empty. Click to a product to add it!</em>
+                </strong>
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-lg-9">
+                <div class="basket-list">
+                    @foreach (var item in Model.Items)
+                    {
+                        <div class="basket-list-item" data-product-id="@item.ProductId">
+                            @if (!item.ImageName.IsNullOrEmpty())
+                            {
+                                <img src="/product-images/@item.ImageName"/>
+                            }
+                            else
+                            {
+                                <img src="/product-images/noimage.jpg"/>
+                            }
+                            @item.ProductName
+                            @if (item.Count > 1)
+                            {
+                                <text> (@("x" + item.Count))</text>
+                            }
+                            - $@item.TotalPrice.ToString("0.00")
+                            <i class="fa fa-remove basket-item-remove" title="@L["RemoveFromBasket"]"></i>
+                        </div>
+                    }
+                    <hr/>
+                    <div class="basket-total-area">
+                        @L["Total"]: $@Model.TotalPrice.ToString("0.00")
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3">
+                @await Component.InvokeAsync(typeof(PurchaseWidgetViewComponent), 
+                    new { Basket = Model, ButtonDescription = "CompletePurchase"})
+            </div>
+        </div>
+    }
+</div>

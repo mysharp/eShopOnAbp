@@ -85,23 +85,41 @@ namespace EShopOnAbp.IdentityService.DbMigrations
 
             await CreateApiResourceAsync("IdentityService", commonApiUserClaims);
             await CreateApiResourceAsync("AdministrationService", commonApiUserClaims);
-            await CreateApiResourceAsync("SaasService", commonApiUserClaims);
+            await CreateApiResourceAsync("CatalogService", commonApiUserClaims);
+            await CreateApiResourceAsync("BasketService", commonApiUserClaims);
+            await CreateApiResourceAsync("OrderingService", commonApiUserClaims);
+            await CreateApiResourceAsync("PaymentService", commonApiUserClaims);
         }
 
         private async Task CreateApiScopesAsync()
         {
             await CreateApiScopeAsync("IdentityService");
             await CreateApiScopeAsync("AdministrationService");
-            await CreateApiScopeAsync("SaasService");
+            await CreateApiScopeAsync("CatalogService");
+            await CreateApiScopeAsync("BasketService");
+            await CreateApiScopeAsync("OrderingService");
+            await CreateApiScopeAsync("PaymentService");
         }
 
         private async Task CreateSwaggerClientsAsync()
         {
-            await CreateSwaggerClientAsync("InternalGateway",
-                new[] { "IdentityService", "AdministrationService", "SaasService" });
-            await CreateSwaggerClientAsync("WebGateway",
-                new[] { "IdentityService", "AdministrationService", "SaasService" });
-            await CreateSwaggerClientAsync("WebPublicGateway");
+            await CreateSwaggerClientAsync("IdentityService",
+                new[] { "IdentityService"});
+
+            await CreateSwaggerClientAsync("AdministrationService",
+                new[] { "AdministrationService" });
+
+            await CreateSwaggerClientAsync("CatalogService",
+                new[] { "CatalogService" });
+
+            await CreateSwaggerClientAsync("BasketService",
+                new[] { "BasketService" });
+
+            await CreateSwaggerClientAsync("OrderingService",
+                new[] { "OrderingService" });
+
+            await CreateSwaggerClientAsync("PaymentService",
+                new[] { "PaymentService" });
         }
 
         private async Task CreateSwaggerClientAsync(string name, string[] scopes = null)
@@ -163,7 +181,7 @@ namespace EShopOnAbp.IdentityService.DbMigrations
 
         private async Task<ApiScope> CreateApiScopeAsync(string name)
         {
-            var apiScope = await _apiScopeRepository.GetByNameAsync(name);
+            var apiScope = await _apiScopeRepository.FindByNameAsync(name );
             if (apiScope == null)
             {
                 apiScope = await _apiScopeRepository.InsertAsync(
@@ -192,13 +210,16 @@ namespace EShopOnAbp.IdentityService.DbMigrations
             };
 
             //Public Web Client
-            var publicWebClientRootUrl = _configuration["IdentityServerClients:EShopOnAbp_PublicWeb:RootUrl"]
+            var publicWebClientRootUrl = _configuration["IdentityServerClients:PublicWeb:RootUrl"]
                 .EnsureEndsWith('/');
             await CreateClientAsync(
-                name: "EShopOnAbp_PublicWeb",
+                name: "PublicWeb",
                 scopes: commonScopes.Union(new[]
                 {
-                    "AdministrationService"
+                    "AdministrationService",
+                    "CatalogService", // Consider removing this service
+                    "BasketService",
+                    "PaymentService"
                 }),
                 grantTypes: new[] { "hybrid" },
                 secret: "1q2w3e*".Sha256(),
@@ -210,16 +231,15 @@ namespace EShopOnAbp.IdentityService.DbMigrations
 
             //Angular Client
             var angularClientRootUrl =
-                _configuration["IdentityServerClients:EShopOnAbp_Angular:RootUrl"].TrimEnd('/');
+                _configuration["IdentityServerClients:Web:RootUrl"].TrimEnd('/');
             await CreateClientAsync(
-                name: "EShopOnAbp_Angular",
+                name: "Web",
                 scopes: commonScopes.Union(new[]
                 {
                     "IdentityService",
-                    "AdministrationService",
-                    "SaasService"
+                    "AdministrationService"
                 }),
-                grantTypes: new[] { "authorization_code", "LinkLogin" },
+                grantTypes: new[] { "authorization_code", "LinkLogin", "password" },
                 secret: "1q2w3e*".Sha256(),
                 requirePkce: true,
                 requireClientSecret: false,
