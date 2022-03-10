@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using EShopOnAbp.PaymentService.PaymentRequests;
+using JetBrains.Annotations;
+using Volo.Abp;
 using Volo.Abp.Domain.Entities;
 
 namespace EShopOnAbp.OrderingService.Orders;
@@ -9,9 +12,11 @@ public class Order : AggregateRoot<Guid>
 {
     private int _orderStatusId;
     public DateTime OrderDate { get; private set; }
-    public Guid? BuyerId { get; private set; }
-    public string Description { get; private set; }
-    public string PaymentMethodToken { get; private set; } // PaymentId or token for validation 
+    public int OrderNo { get; private set; }
+    public string PaymentMethod { get; private set; }
+    public Guid? PaymentRequestId { get; private set; }
+    public string PaymentStatus { get; private set; }
+    public Buyer Buyer { get; private set; }
     public Address Address { get; private set; }
     public OrderStatus OrderStatus { get; private set; }
     public List<OrderItem> OrderItems { get; private set; }
@@ -20,18 +25,42 @@ public class Order : AggregateRoot<Guid>
     {
     }
 
-    public Order(Guid id, Address address, Guid? buyerId = null, string paymentMethodToken = null) : base()
+    internal Order(Guid id, Buyer buyer, Address address, [NotNull]string paymentMethod, Guid? paymentRequestId = null) : base(id)
     {
-        _orderStatusId = OrderStatus.Submitted.Id;
+        _orderStatusId = OrderStatus.Placed.Id;
         OrderDate = DateTime.UtcNow;
+        OrderNo = GenerateOrderNo(id);
+        Buyer = buyer;
         Address = address;
-        BuyerId = buyerId;
-        PaymentMethodToken = paymentMethodToken;
+        PaymentRequestId = paymentRequestId;
+        PaymentMethod = Check.NotNullOrEmpty(paymentMethod,nameof(paymentMethod),maxLength:OrderConstants.OrderPaymentMethodNameMaxLength);
+        PaymentStatus = PaymentRequestState.Waiting.ToString(); // From PaymentService.Domain.Shared
         OrderItems = new List<OrderItem>();
     }
 
-    public void AddOrderItem(Guid productId, string productName, decimal unitPrice, decimal discount, string pictureUrl,
-        int units = 1)
+    private int GenerateOrderNo(Guid id)
+    {
+        // Simple order no generation. Should be improved for uniqueness.
+        var code = Id.GetHashCode();
+        if (code < 0) // Should be negative
+        {
+            code *= -1;
+        }
+
+        return code;
+    }
+
+    internal Order SetOrderAccepted(Guid paymentRequestId, string paymentRequestStatus)
+    {
+        PaymentRequestId = paymentRequestId;
+        PaymentStatus = paymentRequestStatus;
+        OrderStatus = OrderStatus.Paid;
+
+        return this;
+    }
+
+    public Order AddOrderItem(Guid id, Guid productId, string productName, string productCode, decimal unitPrice,
+        decimal discount, string pictureUrl, int units = 1)
     {
         var existingOrderForProduct = OrderItems.SingleOrDefault(o => o.ProductId == productId);
 
@@ -46,9 +75,12 @@ public class Order : AggregateRoot<Guid>
         }
         else
         {
-            var orderItem = new OrderItem(productId, productName, unitPrice, discount, pictureUrl, units);
+            var orderItem = new OrderItem(id, productId, productName, productCode, unitPrice, discount, pictureUrl,
+                units);
             OrderItems.Add(orderItem);
         }
+
+        return this;
     }
 
     public decimal GetTotal()

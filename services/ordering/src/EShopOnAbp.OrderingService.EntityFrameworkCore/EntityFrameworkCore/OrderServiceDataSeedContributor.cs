@@ -30,21 +30,8 @@ public class OrderServiceDataSeedContributor : IDataSeedContributor, ITransientD
     {
         if (!await _dbContext.Set<OrderStatus>().AnyAsync())
         {
-            _dbContext.Set<OrderStatus>().AddRange(GetOrderStatusList());
+            await _dbContext.Set<OrderStatus>().AddRangeAsync(OrderStatus.List());
             await _dbContext.SaveChangesAsync();
         }
-    }
-
-    private List<OrderStatus> GetOrderStatusList()
-    {
-        return new List<OrderStatus>
-        {
-            OrderStatus.Submitted,
-            OrderStatus.AwaitingValidation,
-            OrderStatus.StockConfirmed,
-            OrderStatus.Paid,
-            OrderStatus.Shipped,
-            OrderStatus.Cancelled
-        };
     }
 }

@@ -24,75 +24,44 @@ namespace EShopOnAbp.OrderingService.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("EShopOnAbp.OrderingService.Buyers.Buyer", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ConcurrencyStamp")
-                        .IsConcurrencyToken()
-                        .HasMaxLength(40)
-                        .HasColumnType("character varying(40)")
-                        .HasColumnName("ConcurrencyStamp");
-
-                    b.Property<string>("ExtraProperties")
-                        .HasColumnType("text")
-                        .HasColumnName("ExtraProperties");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("PaymentId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("UserName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Buyers", (string)null);
-                });
-
             modelBuilder.Entity("EShopOnAbp.OrderingService.Orders.Order", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("BuyerId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)")
                         .HasColumnName("ConcurrencyStamp");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)");
 
                     b.Property<string>("ExtraProperties")
                         .HasColumnType("text")
                         .HasColumnName("ExtraProperties");
 
                     b.Property<DateTime>("OrderDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
-                    b.Property<string>("PaymentMethodToken")
-                        .HasColumnType("text");
+                    b.Property<int>("OrderNo")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<Guid?>("PaymentRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PaymentStatus")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<int>("_orderStatusId")
                         .HasColumnType("integer")
                         .HasColumnName("OrderStatusId");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("BuyerId");
-
-                    b.HasIndex("Id");
 
                     b.HasIndex("_orderStatusId");
 
@@ -111,6 +80,10 @@ namespace EShopOnAbp.OrderingService.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("PictureUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProductCode")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<Guid>("ProductId")
@@ -151,10 +124,6 @@ namespace EShopOnAbp.OrderingService.Migrations
 
             modelBuilder.Entity("EShopOnAbp.OrderingService.Orders.Order", b =>
                 {
-                    b.HasOne("EShopOnAbp.OrderingService.Buyers.Buyer", null)
-                        .WithMany()
-                        .HasForeignKey("BuyerId");
-
                     b.HasOne("EShopOnAbp.OrderingService.Orders.OrderStatus", "OrderStatus")
                         .WithMany()
                         .HasForeignKey("_orderStatusId")
@@ -189,7 +158,31 @@ namespace EShopOnAbp.OrderingService.Migrations
                                 .HasForeignKey("OrderId");
                         });
 
+                    b.OwnsOne("EShopOnAbp.OrderingService.Orders.Buyer", "Buyer", b1 =>
+                        {
+                            b1.Property<Guid>("OrderId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Email")
+                                .HasColumnType("text");
+
+                            b1.Property<Guid?>("Id")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Name")
+                                .HasColumnType("text");
+
+                            b1.HasKey("OrderId");
+
+                            b1.ToTable("Orders");
+
+                            b1.WithOwner()
+                                .HasForeignKey("OrderId");
+                        });
+
                     b.Navigation("Address");
+
+                    b.Navigation("Buyer");
 
                     b.Navigation("OrderStatus");
                 });

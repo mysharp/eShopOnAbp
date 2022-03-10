@@ -1,6 +1,6 @@
-﻿using EShopOnAbp.PublicWeb.Basket;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
+using EShopOnAbp.PublicWeb.ServiceProviders;
 using Volo.Abp.AspNetCore.Mvc;
 using Volo.Abp.AspNetCore.Mvc.UI.Widgets;
 
@@ -14,17 +14,17 @@ namespace EShopOnAbp.PublicWeb.Components.Basket;
 )]
 public class BasketWidgetViewComponent : AbpViewComponent
 {
-    private readonly UserBasketProvider userBasketProvider;
+    private readonly UserBasketProvider _userBasketProvider;
 
     public BasketWidgetViewComponent(UserBasketProvider userBasketProvider)
     {
-        this.userBasketProvider = userBasketProvider;
+        _userBasketProvider = userBasketProvider;
     }
 
     public async Task<IViewComponentResult> InvokeAsync()
     {
         return View(
             "~/Components/Basket/Default.cshtml",
-            await userBasketProvider.GetBasketAsync());
+            await _userBasketProvider.GetBasketAsync());
     }
 }

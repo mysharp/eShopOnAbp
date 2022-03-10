@@ -9,17 +9,18 @@ using Volo.Abp.Http.Client.ClientProxying;
 using EShopOnAbp.PaymentService.PaymentRequests;
 
 // ReSharper disable once CheckNamespace
-namespace EShopOnAbp.PaymentService.Controllers.ClientProxies
+namespace EShopOnAbp.PaymentService.Controllers.ClientProxies;
+
+[Dependency(ReplaceServices = true)]
+[ExposeServices(typeof(IPaymentRequestAppService), typeof(PaymentRequestClientProxy))]
+public partial class PaymentRequestClientProxy : ClientProxyBase<IPaymentRequestAppService>, IPaymentRequestAppService
 {
-    [Dependency(ReplaceServices = true)]
-    [ExposeServices(typeof(IPaymentRequestAppService), typeof(PaymentRequestClientProxy))]
-    public partial class PaymentRequestClientProxy : ClientProxyBase<IPaymentRequestAppService>, IPaymentRequestAppService
-    {
-        public virtual async Task<PaymentRequestDto> CompleteAsync(string token)
+    public virtual async Task<PaymentRequestDto> CompleteAsync(string paymentMethod, PaymentRequestCompleteInputDto input)
         {
             return await RequestAsync<PaymentRequestDto>(nameof(CompleteAsync), new ClientProxyRequestTypeValue
             {
-                { typeof(string), token }
+                { typeof(string), paymentMethod },
+                { typeof(PaymentRequestCompleteInputDto), input }
             });
         }
 
@@ -31,20 +32,21 @@ namespace EShopOnAbp.PaymentService.Controllers.ClientProxies
             });
         }
 
-        public virtual async Task<bool> HandleWebhookAsync(string payload)
+        public virtual async Task<bool> HandleWebhookAsync(string paymentMethod, string payload)
         {
             return await RequestAsync<bool>(nameof(HandleWebhookAsync), new ClientProxyRequestTypeValue
             {
+                { typeof(string), paymentMethod },
                 { typeof(string), payload }
             });
         }
 
-        public virtual async Task<PaymentRequestStartResultDto> StartAsync(PaymentRequestStartDto input)
+        public virtual async Task<PaymentRequestStartResultDto> StartAsync(string paymentMethod, PaymentRequestStartDto input)
         {
             return await RequestAsync<PaymentRequestStartResultDto>(nameof(StartAsync), new ClientProxyRequestTypeValue
             {
+                { typeof(string), paymentMethod },
                 { typeof(PaymentRequestStartDto), input }
             });
         }
-    }
 }

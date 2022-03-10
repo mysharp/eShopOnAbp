@@ -3,7 +3,9 @@ config:
   globalConfigurationBaseUrl: http://eshop-st-gateway-public-web
   authServer:
     authority: http://eshop-st-authserver
-    requireHttpsMetadata: "false"  
+    requireHttpsMetadata: "false"
+    swaggerClientId: WebGateway_Swagger
+    swaggerClientSecret: "1q2w3e*"
   dotnetEnv: Staging 
   redisHost: es-st-redis
   rabbitmqHost: es-st-rabbitmq
@@ -11,6 +13,10 @@ config:
   stringEncryptionDefaultPassPhrase: gsKnGZ041HLL4IM8
 
 reRoutes:
+  accountService:
+    schema: http
+    host: eshop-st-authserver
+    port: 80
   identityService:
     schema: http
     host: eshop-st-identity
@@ -27,9 +33,9 @@ reRoutes:
     schema: http
     host: eshop-st-basket
     port: 80
-  orderService:
+  orderingService:
     schema: http
-    host: eshop-st-order
+    host: eshop-st-ordering
     port: 80     
 
 ingress:

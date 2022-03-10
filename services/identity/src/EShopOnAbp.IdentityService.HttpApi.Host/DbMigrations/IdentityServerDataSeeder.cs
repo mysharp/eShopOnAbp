@@ -83,6 +83,7 @@ namespace EShopOnAbp.IdentityService.DbMigrations
                 "role"
             };
 
+            await CreateApiResourceAsync("AccountService", commonApiUserClaims);
             await CreateApiResourceAsync("IdentityService", commonApiUserClaims);
             await CreateApiResourceAsync("AdministrationService", commonApiUserClaims);
             await CreateApiResourceAsync("CatalogService", commonApiUserClaims);
@@ -93,6 +94,7 @@ namespace EShopOnAbp.IdentityService.DbMigrations
 
         private async Task CreateApiScopesAsync()
         {
+            await CreateApiScopeAsync("AccountService");
             await CreateApiScopeAsync("IdentityService");
             await CreateApiScopeAsync("AdministrationService");
             await CreateApiScopeAsync("CatalogService");
@@ -103,26 +105,16 @@ namespace EShopOnAbp.IdentityService.DbMigrations
 
         private async Task CreateSwaggerClientsAsync()
         {
-            await CreateSwaggerClientAsync("IdentityService",
-                new[] { "IdentityService"});
-
-            await CreateSwaggerClientAsync("AdministrationService",
-                new[] { "AdministrationService" });
-
-            await CreateSwaggerClientAsync("CatalogService",
-                new[] { "CatalogService" });
-
-            await CreateSwaggerClientAsync("BasketService",
-                new[] { "BasketService" });
-
-            await CreateSwaggerClientAsync("OrderingService",
-                new[] { "OrderingService" });
-
-            await CreateSwaggerClientAsync("PaymentService",
-                new[] { "PaymentService" });
+            await CreateWebGatewaySwaggerClientAsync("WebGateway",
+                new[]
+                {
+                    "AccountService", "IdentityService", "AdministrationService",
+                    "CatalogService", "BasketService",
+                    "PaymentService", "OrderingService"
+                });
         }
 
-        private async Task CreateSwaggerClientAsync(string name, string[] scopes = null)
+        private async Task CreateWebGatewaySwaggerClientAsync(string name, string[] scopes = null)
         {
             var commonScopes = new[]
             {
@@ -133,22 +125,52 @@ namespace EShopOnAbp.IdentityService.DbMigrations
                 "phone",
                 "address"
             };
-            scopes ??= new[] { name };
+            scopes ??= new[] {name};
 
             // Swagger Client
             var swaggerClientId = $"{name}_Swagger";
             if (!swaggerClientId.IsNullOrWhiteSpace())
             {
-                var swaggerRootUrl = _configuration[$"IdentityServerClients:{name}:RootUrl"].TrimEnd('/');
+                var webGatewaySwaggerRootUrl = _configuration[$"IdentityServerClients:{name}:RootUrl"].TrimEnd('/');
+                var publicWebGatewayRootUrl = _configuration[$"IdentityServerClients:PublicWebGateway:RootUrl"].TrimEnd('/');
+                var accountServiceRootUrl = _configuration[$"IdentityServerClients:AccountService:RootUrl"].TrimEnd('/');
+                var identityServiceRootUrl = _configuration[$"IdentityServerClients:IdentityService:RootUrl"].TrimEnd('/');
+                var administrationServiceRootUrl = _configuration[$"IdentityServerClients:AdministrationService:RootUrl"].TrimEnd('/');
+                var catalogServiceRootUrl = _configuration[$"IdentityServerClients:CatalogService:RootUrl"].TrimEnd('/');
+                var basketServiceRootUrl = _configuration[$"IdentityServerClients:BasketService:RootUrl"].TrimEnd('/');
+                var orderingServiceRootUrl = _configuration[$"IdentityServerClients:OrderingService:RootUrl"].TrimEnd('/');
+                var paymentServiceRootUrl = _configuration[$"IdentityServerClients:PaymentService:RootUrl"].TrimEnd('/');
 
                 await CreateClientAsync(
                     name: swaggerClientId,
                     scopes: commonScopes.Union(scopes),
-                    grantTypes: new[] { "authorization_code" },
+                    grantTypes: new[] {"authorization_code"},
                     secret: "1q2w3e*".Sha256(),
                     requireClientSecret: false,
-                    redirectUri: $"{swaggerRootUrl}/swagger/oauth2-redirect.html",
-                    corsOrigins: new[] { swaggerRootUrl.RemovePostFix("/") }
+                    redirectUris: new List<string>
+                    {
+                        $"{webGatewaySwaggerRootUrl}/swagger/oauth2-redirect.html", // WebGateway redirect uri
+                        $"{publicWebGatewayRootUrl}/swagger/oauth2-redirect.html", // PublicWebGateway redirect uri
+                        $"{accountServiceRootUrl}/swagger/oauth2-redirect.html", // AccountService redirect uri
+                        $"{identityServiceRootUrl}/swagger/oauth2-redirect.html", // IdentityService redirect uri
+                        $"{administrationServiceRootUrl}/swagger/oauth2-redirect.html", // AdministrationService redirect uri
+                        $"{catalogServiceRootUrl}/swagger/oauth2-redirect.html", // CatalogService redirect uri
+                        $"{basketServiceRootUrl}/swagger/oauth2-redirect.html", // BasketService redirect uri
+                        $"{orderingServiceRootUrl}/swagger/oauth2-redirect.html", // OrderingService redirect uri
+                        $"{paymentServiceRootUrl}/swagger/oauth2-redirect.html" // PaymentService redirect uri
+                    },
+                    corsOrigins: new[]
+                    {
+                        webGatewaySwaggerRootUrl.RemovePostFix("/"),
+                        publicWebGatewayRootUrl.RemovePostFix("/"),
+                        accountServiceRootUrl.RemovePostFix("/"),
+                        identityServiceRootUrl.RemovePostFix("/"),
+                        administrationServiceRootUrl.RemovePostFix("/"),
+                        catalogServiceRootUrl.RemovePostFix("/"),
+                        basketServiceRootUrl.RemovePostFix("/"),
+                        orderingServiceRootUrl.RemovePostFix("/"),
+                        paymentServiceRootUrl.RemovePostFix("/")
+                    }
                 );
             }
         }
@@ -181,7 +203,7 @@ namespace EShopOnAbp.IdentityService.DbMigrations
 
         private async Task<ApiScope> CreateApiScopeAsync(string name)
         {
-            var apiScope = await _apiScopeRepository.FindByNameAsync(name );
+            var apiScope = await _apiScopeRepository.FindByNameAsync(name);
             if (apiScope == null)
             {
                 apiScope = await _apiScopeRepository.InsertAsync(
@@ -216,17 +238,19 @@ namespace EShopOnAbp.IdentityService.DbMigrations
                 name: "PublicWeb",
                 scopes: commonScopes.Union(new[]
                 {
+                    "AccountService",
                     "AdministrationService",
-                    "CatalogService", // Consider removing this service
+                    "CatalogService",
                     "BasketService",
-                    "PaymentService"
+                    "PaymentService",
+                    "OrderingService"
                 }),
-                grantTypes: new[] { "hybrid" },
+                grantTypes: new[] {"hybrid"},
                 secret: "1q2w3e*".Sha256(),
-                redirectUri: $"{publicWebClientRootUrl}signin-oidc",
+                redirectUris: new List<string>{ $"{publicWebClientRootUrl}signin-oidc" },
                 postLogoutRedirectUri: $"{publicWebClientRootUrl}signout-callback-oidc",
                 frontChannelLogoutUri: $"{publicWebClientRootUrl}Account/FrontChannelLogout",
-                corsOrigins: new[] { publicWebClientRootUrl.RemovePostFix("/") }
+                corsOrigins: new[] {publicWebClientRootUrl.RemovePostFix("/")}
             );
 
             //Angular Client
@@ -236,16 +260,18 @@ namespace EShopOnAbp.IdentityService.DbMigrations
                 name: "Web",
                 scopes: commonScopes.Union(new[]
                 {
+                    "AccountService",
                     "IdentityService",
-                    "AdministrationService"
+                    "AdministrationService",
+                    "CatalogService"
                 }),
-                grantTypes: new[] { "authorization_code", "LinkLogin", "password" },
+                grantTypes: new[] {"authorization_code", "LinkLogin", "password"},
                 secret: "1q2w3e*".Sha256(),
                 requirePkce: true,
                 requireClientSecret: false,
-                redirectUri: $"{angularClientRootUrl}",
+                redirectUris: new List<string>{ $"{angularClientRootUrl}" },
                 postLogoutRedirectUri: $"{angularClientRootUrl}",
-                corsOrigins: new[] { angularClientRootUrl }
+                corsOrigins: new[] {angularClientRootUrl}
             );
 
             //Administration Service Client
@@ -255,9 +281,9 @@ namespace EShopOnAbp.IdentityService.DbMigrations
                 {
                     "IdentityService"
                 }),
-                grantTypes: new[] { "client_credentials" },
+                grantTypes: new[] {"client_credentials"},
                 secret: "1q2w3e*".Sha256(),
-                permissions: new[] { IdentityPermissions.Users.Default }
+                permissions: new[] {IdentityPermissions.Users.Default}
             );
         }
 
@@ -266,7 +292,7 @@ namespace EShopOnAbp.IdentityService.DbMigrations
             IEnumerable<string> scopes,
             IEnumerable<string> grantTypes,
             string secret = null,
-            string redirectUri = null,
+            List<string> redirectUris = null,
             string postLogoutRedirectUri = null,
             string frontChannelLogoutUri = null,
             bool requireClientSecret = true,
@@ -325,11 +351,17 @@ namespace EShopOnAbp.IdentityService.DbMigrations
                 }
             }
 
-            if (redirectUri != null)
+            if (redirectUris != null)
             {
-                if (client.FindRedirectUri(redirectUri) == null)
+                foreach (var redirectUri in redirectUris)
                 {
-                    client.AddRedirectUri(redirectUri);
+                    if (redirectUri != null)
+                    {
+                        if (client.FindRedirectUri(redirectUri) == null)
+                        {
+                            client.AddRedirectUri(redirectUri);
+                        }
+                    }
                 }
             }
 

@@ -13,6 +13,7 @@ using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using StackExchange.Redis;
 using System;
 using System.Net.Http.Headers;
+using EShopOnAbp.OrderingService;
 using Volo.Abp;
 using Volo.Abp.Account;
 using Volo.Abp.AspNetCore.Authentication.OpenIdConnect;
@@ -32,168 +33,196 @@ using Volo.Abp.MultiTenancy;
 using Volo.Abp.UI.Navigation;
 using Volo.Abp.UI.Navigation.Urls;
 using Yarp.ReverseProxy.Transforms;
+using Volo.Abp.AspNetCore.Mvc.UI.Bundling;
+using Volo.Abp.AspNetCore.Mvc.UI.Theme.Basic.Bundling;
+using EShopOnAbp.PublicWeb.Components.Toolbar.Cart;
+using EShopOnAbp.PublicWeb.PaymentMethods;
+using EShopOnAbp.PaymentService.PaymentMethods;
+using EShopOnAbp.PublicWeb.AnonymousUser;
+using Microsoft.Extensions.Configuration;
+using Volo.Abp.VirtualFileSystem;
 
-namespace EShopOnAbp.PublicWeb
+namespace EShopOnAbp.PublicWeb;
+
+[DependsOn(
+    typeof(AbpCachingStackExchangeRedisModule),
+    typeof(AbpEventBusRabbitMqModule),
+    typeof(AbpAspNetCoreMvcClientModule),
+    typeof(AbpAspNetCoreAuthenticationOpenIdConnectModule),
+    typeof(AbpHttpClientIdentityModelWebModule),
+    typeof(AbpAspNetCoreMvcUiBasicThemeModule),
+    typeof(AbpAccountHttpApiClientModule),
+    typeof(EShopOnAbpSharedHostingAspNetCoreModule),
+    typeof(EShopOnAbpSharedLocalizationModule),
+    typeof(CatalogServiceHttpApiClientModule),
+    typeof(BasketServiceContractsModule),
+    typeof(OrderingServiceHttpApiClientModule),
+    typeof(AbpAspNetCoreSignalRModule),
+    typeof(PaymentServiceHttpApiClientModule),
+    typeof(AbpAutoMapperModule)
+)]
+public class EShopOnAbpPublicWebModule : AbpModule
 {
-    [DependsOn(
-        typeof(AbpCachingStackExchangeRedisModule),
-        typeof(AbpEventBusRabbitMqModule),
-        typeof(AbpAspNetCoreMvcClientModule),
-        typeof(AbpAspNetCoreAuthenticationOpenIdConnectModule),
-        typeof(AbpHttpClientIdentityModelWebModule),
-        typeof(AbpAspNetCoreMvcUiBasicThemeModule),
-        typeof(AbpAccountHttpApiModule),
-        typeof(AbpAccountHttpApiClientModule),
-        typeof(EShopOnAbpSharedHostingAspNetCoreModule),
-        typeof(EShopOnAbpSharedLocalizationModule),
-        typeof(CatalogServiceHttpApiClientModule),
-        typeof(BasketServiceHttpApiClientModule),
-        typeof(AbpAspNetCoreSignalRModule),
-        typeof(PaymentServiceHttpApiClientModule),
-        typeof(AbpAutoMapperModule)
-        )]
-    public class EShopOnAbpPublicWebModule : AbpModule
+    public override void PreConfigureServices(ServiceConfigurationContext context)
     {
-        public override void PreConfigureServices(ServiceConfigurationContext context)
+        context.Services.PreConfigure<AbpMvcDataAnnotationsLocalizationOptions>(options =>
         {
-            context.Services.PreConfigure<AbpMvcDataAnnotationsLocalizationOptions>(options =>
-            {
-                options.AddAssemblyResource(
-                    typeof(EShopOnAbpResource),
-                    typeof(EShopOnAbpPublicWebModule).Assembly
-                );
-            });
-        }
+            options.AddAssemblyResource(
+                typeof(EShopOnAbpResource),
+                typeof(EShopOnAbpPublicWebModule).Assembly
+            );
+        });
+    }
 
-        public override void ConfigureServices(ServiceConfigurationContext context)
+    public override void ConfigureServices(ServiceConfigurationContext context)
+    {
+        Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
+        var hostingEnvironment = context.Services.GetHostingEnvironment();
+        var configuration = context.Services.GetConfiguration();
+
+        ConfigureBasketHttpClient(context);
+
+        context.Services.AddAutoMapperObjectMapper<EShopOnAbpPublicWebModule>();
+        Configure<AbpAutoMapperOptions>(options => { options.AddMaps<EShopOnAbpPublicWebModule>(validate: true); });
+
+        Configure<AbpBundlingOptions>(options =>
         {
-            Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
-            var hostingEnvironment = context.Services.GetHostingEnvironment();
-            var configuration = context.Services.GetConfiguration();
+            options.StyleBundles.Configure(
+                BasicThemeBundles.Styles.Global,
+                bundle => { bundle.AddContributors(typeof(CartWidgetStyleContributor)); }
+            );
+        });
 
-            context.Services.AddAutoMapperObjectMapper<EShopOnAbpPublicWebModule>();
-            Configure<AbpAutoMapperOptions>(options =>
+        Configure<AbpMultiTenancyOptions>(options => { options.IsEnabled = true; });
+
+        Configure<AbpDistributedCacheOptions>(options => { options.KeyPrefix = "EShopOnAbp:"; });
+
+        Configure<AppUrlOptions>(options => { options.Applications["MVC"].RootUrl = configuration["App:SelfUrl"]; });
+
+        ConfigurePayment(configuration);
+
+        context.Services.AddAuthentication(options =>
             {
-                options.AddMaps<EShopOnAbpPublicWebModule>(validate: true);
+                options.DefaultScheme = "Cookies";
+                options.DefaultChallengeScheme = "oidc";
+            })
+            .AddCookie("Cookies", options => { options.ExpireTimeSpan = TimeSpan.FromDays(365); })
+            .AddAbpOpenIdConnect("oidc", options =>
+            {
+                options.Authority = configuration["AuthServer:Authority"];
+                options.RequireHttpsMetadata = Convert.ToBoolean(configuration["AuthServer:RequireHttpsMetadata"]);
+                options.ResponseType = OpenIdConnectResponseType.CodeIdToken;
+
+                options.ClientId = configuration["AuthServer:ClientId"];
+                options.ClientSecret = configuration["AuthServer:ClientSecret"];
+
+                options.SaveTokens = true;
+                options.GetClaimsFromUserInfoEndpoint = true;
+
+                options.Scope.Add("role");
+                options.Scope.Add("email");
+                options.Scope.Add("phone");
+                options.Scope.Add("AccountService");
+                options.Scope.Add("AdministrationService");
+                options.Scope.Add("BasketService");
+                options.Scope.Add("CatalogService");
+                options.Scope.Add("PaymentService");
+                options.Scope.Add("OrderingService");
             });
 
-            Configure<AbpMultiTenancyOptions>(options =>
-            {
-                options.IsEnabled = true;
-            });
+        var redis = ConnectionMultiplexer.Connect(configuration["Redis:Configuration"]);
+        context.Services
+            .AddDataProtection()
+            .PersistKeysToStackExchangeRedis(redis, "EShopOnAbp-Protection-Keys")
+            .SetApplicationName("eShopOnAbp-PublicWeb");
 
-            Configure<AbpDistributedCacheOptions>(options =>
-            {
-                options.KeyPrefix = "EShopOnAbp:";
-            });
+        Configure<AbpNavigationOptions>(options =>
+        {
+            options.MenuContributors.Add(new EShopOnAbpPublicWebMenuContributor(configuration));
+        });
 
-            Configure<AppUrlOptions>(options =>
-            {
-                options.Applications["MVC"].RootUrl = configuration["App:SelfUrl"];
-            });
+        Configure<AbpToolbarOptions>(options =>
+        {
+            options.Contributors.Add(new EShopOnAbpPublicWebToolbarContributor());
+        });
 
-            Configure<EShopOnAbpPublicWebPaymentOptions>(options =>
+        context.Services
+            .AddReverseProxy()
+            .LoadFromConfig(configuration.GetSection("ReverseProxy"))
+            .AddTransforms(builderContext =>
             {
-                options.PaymentSuccessfulCallbackUrl = configuration["App:SelfUrl"].EnsureEndsWith('/') + "PaymentCompleted";
-            });
-
-            context.Services.AddAuthentication(options =>
+                builderContext.AddRequestTransform(async (transformContext) =>
                 {
-                    options.DefaultScheme = "Cookies";
-                    options.DefaultChallengeScheme = "oidc";
-                })
-                .AddCookie("Cookies", options =>
-                {
-                    options.ExpireTimeSpan = TimeSpan.FromDays(365);
-                })
-                .AddAbpOpenIdConnect("oidc", options =>
-                {
-                    options.Authority = configuration["AuthServer:Authority"];
-                    options.RequireHttpsMetadata = Convert.ToBoolean(configuration["AuthServer:RequireHttpsMetadata"]);
-                    options.ResponseType = OpenIdConnectResponseType.CodeIdToken;
-
-                    options.ClientId = configuration["AuthServer:ClientId"];
-                    options.ClientSecret = configuration["AuthServer:ClientSecret"];
-
-                    options.SaveTokens = true;
-                    options.GetClaimsFromUserInfoEndpoint = true;
-
-                    options.Scope.Add("role");
-                    options.Scope.Add("email");
-                    options.Scope.Add("phone");
-                    options.Scope.Add("AdministrationService");
-                    options.Scope.Add("BasketService");
-                    options.Scope.Add("CatalogService");
-                    options.Scope.Add("PaymentService");
+                    transformContext.ProxyRequest.Headers
+                        .Authorization = new AuthenticationHeaderValue(
+                        "Bearer",
+                        await transformContext.HttpContext.GetTokenAsync("access_token")
+                    );
                 });
-
-            var redis = ConnectionMultiplexer.Connect(configuration["Redis:Configuration"]);
-            context.Services
-                .AddDataProtection()
-                .PersistKeysToStackExchangeRedis(redis, "EShopOnAbp-Protection-Keys")
-                .SetApplicationName("eShopOnAbp-PublicWeb");
-
-            Configure<AbpNavigationOptions>(options =>
-            {
-                options.MenuContributors.Add(new EShopOnAbpPublicWebMenuContributor(configuration));
             });
+    }
 
-            Configure<AbpToolbarOptions>(options =>
-            {
-                options.Contributors.Add(new EShopOnAbpPublicWebToolbarContributor());
-            });
-            
-            context.Services
-                .AddReverseProxy()
-                .LoadFromConfig(configuration.GetSection("ReverseProxy"))
-                .AddTransforms(builderContext =>
-                {
-                    builderContext.AddRequestTransform(async (transformContext) =>
-                    {
-                        transformContext.ProxyRequest.Headers
-                            .Authorization = new AuthenticationHeaderValue(
-                                "Bearer",
-                                await transformContext.HttpContext.GetTokenAsync("access_token")
-                            );
-                    });
-                });
-        }
-
-        public override void OnApplicationInitialization(ApplicationInitializationContext context)
+    private void ConfigureBasketHttpClient(ServiceConfigurationContext context)
+    {
+        context.Services.AddStaticHttpClientProxies(
+            typeof(BasketServiceContractsModule).Assembly, remoteServiceConfigurationName: BasketServiceConstants.RemoteServiceName
+        );
+        
+        Configure<AbpVirtualFileSystemOptions>(options =>
         {
-            var app = context.GetApplicationBuilder();
-            var env = context.GetEnvironment();
-            
-            app.Use((ctx, next) =>
-            {
-                ctx.Request.Scheme = "https";
-                return next();
-            });
+            options.FileSets.AddEmbedded<EShopOnAbpPublicWebModule>();
+        });
+    }
 
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
+    private void ConfigurePayment(IConfiguration configuration)
+    {
+        Configure<EShopOnAbpPublicWebPaymentOptions>(options =>
+        {
+            options.PaymentSuccessfulCallbackUrl =
+                configuration["App:SelfUrl"].EnsureEndsWith('/') + "PaymentCompleted";
+        });
 
-            app.UseAbpRequestLocalization();
+        Configure<PaymentMethodUiOptions>(options =>
+        {
+            options.ConfigureIcon(PaymentMethodNames.PayPal, "fa-cc-paypal paypal");
+        });
+    }
 
-            if (!env.IsDevelopment())
-            {
-                app.UseErrorPage();
-            }
+    public override void OnApplicationInitialization(ApplicationInitializationContext context)
+    {
+        var app = context.GetApplicationBuilder();
+        var env = context.GetEnvironment();
 
-            app.UseCorrelationId();
-            app.UseStaticFiles();
-            app.UseRouting();
-            // app.UseHttpMetrics();
-            app.UseAuthentication();
-            app.UseAbpSerilogEnrichers();
-            app.UseAuthorization();
-            app.UseConfiguredEndpoints(endpoints =>
-            {
-                endpoints.MapReverseProxy();
-                // endpoints.MapMetrics();
-            });
+        app.Use((ctx, next) =>
+        {
+            ctx.Request.Scheme = "https";
+            return next();
+        });
+
+        if (env.IsDevelopment())
+        {
+            app.UseDeveloperExceptionPage();
         }
+
+        app.UseAbpRequestLocalization();
+
+        if (!env.IsDevelopment())
+        {
+            app.UseErrorPage();
+        }
+
+        app.UseCorrelationId();
+        app.UseStaticFiles();
+        app.UseRouting();
+        // app.UseHttpMetrics();
+        app.UseAuthentication();
+        app.UseAbpSerilogEnrichers();
+        app.UseAuthorization();
+        app.UseAnonymousUser();
+        app.UseConfiguredEndpoints(endpoints =>
+        {
+            endpoints.MapReverseProxy();
+            // endpoints.MapMetrics();
+        });
     }
 }

@@ -1,9 +1,9 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System;
+using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.AuditLogging.EntityFrameworkCore;
 using Volo.Abp.BlobStoring.Database.EntityFrameworkCore;
 using Volo.Abp.EntityFrameworkCore;
 using Volo.Abp.EntityFrameworkCore.PostgreSql;
-using Volo.Abp.FeatureManagement.EntityFrameworkCore;
 using Volo.Abp.Modularity;
 using Volo.Abp.PermissionManagement.EntityFrameworkCore;
 using Volo.Abp.SettingManagement.EntityFrameworkCore;
@@ -16,7 +16,6 @@ namespace EShopOnAbp.AdministrationService.EntityFrameworkCore
         typeof(AbpPermissionManagementEntityFrameworkCoreModule),
         typeof(AbpSettingManagementEntityFrameworkCoreModule),
         typeof(AbpAuditLoggingEntityFrameworkCoreModule),
-        typeof(AbpFeatureManagementEntityFrameworkCoreModule),
         typeof(BlobStoringDatabaseEntityFrameworkCoreModule)
         )]
     public class AdministrationServiceEntityFrameworkCoreModule : AbpModule
@@ -27,12 +26,14 @@ namespace EShopOnAbp.AdministrationService.EntityFrameworkCore
             {
                 options.ReplaceDbContext<IPermissionManagementDbContext>();
                 options.ReplaceDbContext<ISettingManagementDbContext>();
-                options.ReplaceDbContext<IFeatureManagementDbContext>();
                 options.ReplaceDbContext<IAuditLoggingDbContext>();
                 options.ReplaceDbContext<IBlobStoringDbContext>();
 
                 options.AddDefaultRepositories(includeAllEntities: true);
             });
+
+            // https://www.npgsql.org/efcore/release-notes/6.0.html#opting-out-of-the-new-timestamp-mapping-logic
+            AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
             Configure<AbpDbContextOptions>(options =>
             {

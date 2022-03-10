@@ -3,17 +3,20 @@ kind: ConfigMap
 metadata:
   name: {{ .Release.Name }}-{{ .Chart.Name }}-configmap
 data:
-  appsettings.json: |-
+  ocelot.json: |-
     {
+      "GlobalConfiguration": {
+      "BaseUrl": "{{ .Values.config.globalConfigurationBaseUrl }}"
+    },
       "Routes": [   
     {
-      "ServiceKey": "Identity Service",
+      "ServiceKey": "Account Service",
       "DownstreamPathTemplate": "/api/account/{everything}",
-      "DownstreamScheme": "{{ .Values.reRoutes.identityService.schema }}",
+      "DownstreamScheme": "{{ .Values.reRoutes.accountService.schema }}",
       "DownstreamHostAndPorts": [
         {
-          "Host": "{{ .Values.reRoutes.identityService.host }}",
-          "Port": {{ .Values.reRoutes.identityService.port }}
+          "Host": "{{ .Values.reRoutes.accountService.host }}",
+          "Port": {{ .Values.reRoutes.accountService.port }}
         }
       ],
       "UpstreamPathTemplate": "/api/account/{everything}",
@@ -42,7 +45,7 @@ data:
           "Port": "{{ .Values.reRoutes.catalogService.port }}",
         }
       ],
-      "UpstreamPathTemplate": "/api/catalog/{everything}",
+      "UpstreamPathTemplate": "/api/c/catalog/{everything}",
       "UpstreamHttpMethod": [ "Put", "Delete", "Get", "Post" ]
     },
     {
@@ -61,11 +64,11 @@ data:
     {
       "ServiceKey": "Ordering Service",
       "DownstreamPathTemplate": "/api/ordering/{everything}",
-      "DownstreamScheme": "{{ .Values.reRoutes.orderService.schema }}",
+      "DownstreamScheme": "{{ .Values.reRoutes.orderingService.schema }}",
       "DownstreamHostAndPorts": [
         {
-          "Host": "{{ .Values.reRoutes.orderService.host }}",
-          "Port": "{{ .Values.reRoutes.orderService.port }}",
+          "Host": "{{ .Values.reRoutes.orderingService.host }}",
+          "Port": "{{ .Values.reRoutes.orderingService.port }}",
         }
       ],
       "UpstreamPathTemplate": "/api/ordering/{everything}",
