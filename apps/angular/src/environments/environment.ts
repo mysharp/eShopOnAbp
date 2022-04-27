@@ -1,4 +1,4 @@
-import { Environment } from '@abp/ng.core';
+import { MyEnvironment } from './my-environment';
 
 const baseUrl = 'http://localhost:4200';
 
@@ -12,8 +12,8 @@ export const environment = {
     issuer: 'https://localhost:44330',
     redirectUri: baseUrl,
     clientId: 'Web',
-    //responseType: 'code',
-    scope: 'offline_access openid profile email phone AccountService IdentityService AdministrationService CatalogService',
+    responseType: 'code',
+    scope: 'offline_access openid profile email phone AccountService IdentityService AdministrationService CatalogService OrderingService',
     //requireHttps: true,
   },
   apis: {
@@ -25,5 +25,12 @@ export const environment = {
       url: 'https://localhost:44354',
       rootNamespace: 'EShopOnAbp.CatalogService',
     },
+    Ordering: {
+      url: "https://localhost:44356",
+      rootNamespace: 'EShopOnAbp.OrderingService',
+    }
   },
-} as Environment;
+  mediaServerUrl:'https://localhost:44335'
+} as MyEnvironment;
+
+

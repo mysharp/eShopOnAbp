@@ -4,24 +4,26 @@ using EShopOnAbp.Shared.Hosting.Microservices.DbMigrations.EfCore;
 using Volo.Abp.EventBus.Distributed;
 using Volo.Abp.MultiTenancy;
 using Volo.Abp.Uow;
+using Volo.Abp.DistributedLocking;
 
-namespace EShopOnAbp.PaymentService.DbMigrations
+namespace EShopOnAbp.PaymentService.DbMigrations;
+
+public class PaymentServiceDatabaseMigrationChecker
+    : PendingEfCoreMigrationsChecker<PaymentServiceDbContext>
 {
-    public class PaymentServiceDatabaseMigrationChecker : PendingEfCoreMigrationsChecker<PaymentServiceDbContext>
+    public PaymentServiceDatabaseMigrationChecker(
+        IUnitOfWorkManager unitOfWorkManager,
+        IServiceProvider serviceProvider,
+        ICurrentTenant currentTenant,
+        IDistributedEventBus distributedEventBus,
+        IAbpDistributedLock abpDistributedLock)
+        : base(
+            unitOfWorkManager,
+            serviceProvider,
+            currentTenant,
+            distributedEventBus,
+            abpDistributedLock,
+            PaymentServiceDbProperties.ConnectionStringName)
     {
-        public PaymentServiceDatabaseMigrationChecker(
-            IUnitOfWorkManager unitOfWorkManager,
-            IServiceProvider serviceProvider,
-            ICurrentTenant currentTenant,
-            IDistributedEventBus distributedEventBus)
-            : base(
-                unitOfWorkManager,
-                serviceProvider,
-                currentTenant,
-                distributedEventBus,
-                PaymentServiceDbProperties.ConnectionStringName)
-        {
-
-        }
     }
 }
